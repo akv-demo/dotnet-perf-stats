@@ -1,0 +1,52 @@
+name: .NET Core Console
+
+on:
+  push:
+  pull_request:
+
+jobs:
+
+  build:
+
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+        os: [macos-latest, ubuntu-latest]
+        usecache: [true, false]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - uses: actions/cache@v3
+      if: ${{ matrix.usecache }}
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    # Install the .NET Core workload
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 6.0.x
+
+    # Restore the application to populate the obj folder with RuntimeIdentifiers
+    - name: Restore the application
+      run: |
+        nuget locals all -list
+        dotnet restore -v n
+        ls -l ~
+        ls -l ~/.nuget
+        ls -l ~/.nuget/packages
+
+    - name: Build the application
+      run: dotnet build -c $env:Configuration
+      env:
+        Configuration: ${{ matrix.configuration }}
+
